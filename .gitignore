@@ -1,0 +1,23 @@
+# Python virtual environments and generated files
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Local editor configuration
+.vscode/
+
+# Dataset: the local source file is larger than GitHub's 100 MB file limit.
+data/*.csv
+!data/.gitkeep
+
+# Model artifacts and local outputs
+models/
+outputs/
+*.pkl
+*.joblib
+
+# Environment files and secrets
+.env
+.env.*

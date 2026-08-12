@@ -1,292 +1,176 @@
 <div align="center">
 
-Credit Card Fraud Detection
+# Credit Card Fraud Detection
 
-Imbalanced classification for identifying rare fraudulent credit-card transactions.
+### Exploratory Analysis of Highly Imbalanced Transaction Data
 
-<p>
-  <img src="https://img.shields.io/badge/Transactions-284%2C807-0969da?style=flat-square" alt="Transactions">
-  <img src="https://img.shields.io/badge/Fraud%20Cases-492-b42318?style=flat-square" alt="Fraud cases">
-  <img src="https://img.shields.io/badge/Fraud%20Rate-0.1727%25-orange?style=flat-square" alt="Fraud rate">
-  <img src="https://img.shields.io/badge/Primary%20Metric-AUPRC-6f42c1?style=flat-square" alt="AUPRC">
-</p>
+Understanding the structure, imbalance, and statistical characteristics of fraudulent credit-card transactions before building predictive models.
+
+![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-Data%20Analysis-150458?style=flat-square&logo=pandas&logoColor=white)
+![Status](https://img.shields.io/badge/Status-EDA%20Complete-2ea44f?style=flat-square)
 
 </div>
 
-Overview
+---
 
-Credit-card fraud detection is an extreme class-imbalance problem. In this dataset, only 492 of 284,807 transactions are fraudulent, so a classifier that predicts every transaction as legitimate would still appear highly accurate.
+## Overview
 
-This project therefore treats fraud detection as a rare-event classification problem and prioritizes AUPRC, recall, precision, and F1-score over raw accuracy.
+Credit-card fraud detection is a rare-event classification problem in which fraudulent transactions represent only a tiny fraction of all observations.
 
-The repository is structured as a reproducible workflow:
+This project begins with a detailed exploratory analysis of **284,807 credit-card transactions** to understand the dataset, identify data-quality issues, examine class imbalance, and establish a reliable foundation for subsequent fraud-detection modeling.
 
-EDA → leakage-safe preprocessing → class-aware modeling → threshold tuning → final evaluation
+### Dataset at a Glance
 
-<p align="center">
-  <img src="figures/pipeline.png" width="94%" alt="Fraud detection pipeline">
-</p>
+| | |
+|---|---:|
+| **Transactions** | 284,807 |
+| **Features** | 31 |
+| **Fraud Cases** | 492 |
+| **Legitimate Cases** | 284,315 |
+| **Fraud Rate** | **0.1727%** |
+| **Missing Values** | 0 |
+| **Duplicate Rows** | 1,081 |
 
-Dataset
+---
 
-The dataset contains 284,807 transactions and 31 columns. The existing EDA found no missing values and 1,081 duplicated rows before optional deduplication.
+## The Problem
 
-<p align="center">
-  <img src="figures/dataset_overview.png" width="82%" alt="Dataset overview">
-</p>
+### How do we detect fraud when fewer than 2 transactions in 1,000 are fraudulent?
 
-Feature group
+The dataset is extremely imbalanced:
 
-Description
+- **284,315** legitimate transactions
+- only **492** fraudulent transactions
+- fraud accounts for approximately **0.1727%** of the dataset
 
-Time
+This means conventional accuracy can be highly misleading.
 
-Seconds elapsed between each transaction and the first transaction
+A classifier predicting every transaction as legitimate would achieve more than **99.8% accuracy** while detecting **zero fraud cases**.
 
-V1–V28
+For this reason, the project focuses on understanding the minority class before moving toward metrics such as **precision, recall, F1-score, and AUPRC**.
 
-PCA-transformed numerical features
+---
 
-Amount
+## Dataset
 
-Transaction amount
+The dataset contains anonymized credit-card transactions represented by 31 numerical variables.
 
-Class
+| Feature | Description |
+|---|---|
+| `Time` | Seconds elapsed between the transaction and the first recorded transaction |
+| `V1` – `V28` | PCA-transformed anonymized transaction features |
+| `Amount` | Transaction amount |
+| `Class` | Target variable: `0` = legitimate, `1` = fraud |
 
-Target label: 0 legitimate, 1 fraud
+The PCA transformation protects confidential transaction information while retaining statistical patterns useful for analysis.
 
-The raw CSV is not stored in Git. See data/README.md for setup instructions.
+---
 
-The Core Challenge: 0.17% Fraud
+## Exploratory Data Analysis
 
-Fraud represents only 0.1727% of all transactions.
+The current analysis focuses on four questions:
 
-<p align="center">
-  <img src="figures/class_imbalance.png" width="68%" alt="Extreme class imbalance">
-</p>
+### 01 — Data Quality
 
-This changes how the project should be designed:
+Are there missing values, duplicated observations, or structural issues that should be addressed before modeling?
 
-Accuracy is not a useful primary metric.
+**Findings**
 
-Training and evaluation splits must preserve the minority-class ratio.
+- No missing values were identified.
+- **1,081 duplicate rows** were detected.
+- The dataset contains only numerical variables.
 
-Resampling, if used, must be applied only to training data.
+---
 
-Threshold selection should be performed on validation data, never on the test set.
+### 02 — Class Distribution
 
-The final model must balance missed fraud (false negatives) against unnecessary alerts (false positives).
+How severe is the imbalance between legitimate and fraudulent transactions?
 
-Data Quality & EDA
+The imbalance is extreme:
 
-The current EDA notebook verifies:
+| Class | Transactions | Share |
+|---|---:|---:|
+| Legitimate | 284,315 | 99.8273% |
+| Fraud | 492 | **0.1727%** |
 
-Check
+This imbalance is the central modeling challenge of the project.
 
-Finding
+---
 
-Dataset shape
+### 03 — Transaction Behavior
 
-284,807 × 31
+How do transaction amount and timing differ across the two classes?
 
-Missing values
+The EDA investigates the distributions of:
 
-0
+- transaction amount;
+- transaction time;
+- fraud vs. legitimate activity;
+- PCA-derived variables;
+- feature correlations.
 
-Duplicate rows
+These analyses help identify potentially discriminative patterns before introducing a classification algorithm.
 
-1,081
+---
 
-Legitimate transactions
+### 04 — Feature Relationships
 
-284,315
+Because `V1`–`V28` are PCA-transformed variables, their original business meaning is unavailable.
 
-Fraudulent transactions
+Instead of assigning unsupported interpretations to these variables, the analysis focuses on their statistical relationships with the fraud label.
 
-492
+This keeps the analysis grounded in the information actually available in the dataset.
 
-Fraud share
+---
 
-0.1727%
+## Key Findings
 
-<p align="center">
-  <img src="figures/class_share.png" width="68%" alt="Class share">
-</p>
+### Extreme imbalance is the defining characteristic
 
-The EDA also explores transaction amount, time, PCA-derived variables, and feature correlations before any modeling decision is made.
+Only **0.1727%** of transactions are fraudulent.
 
-Preprocessing Strategy
+This makes fraud detection fundamentally different from a standard balanced classification task.
 
-The preprocessing module is designed to avoid the most common leakage errors in fraud detection.
+### Accuracy alone is inappropriate
 
-1. Deduplication
+A naïve majority-class classifier could exceed **99.8% accuracy** without identifying a single fraudulent transaction.
 
-Duplicate rows can optionally be removed before splitting.
+Evaluation therefore needs to prioritize minority-class performance.
 
-2. Stratified splitting
+### Data quality is relatively strong
 
-The data is divided into train / validation / test sets using the class label for stratification so the rare fraud proportion is represented in every split.
+The dataset contains **no missing values**, reducing the need for imputation.
 
-3. Training-only scaling
+However, **1,081 duplicate observations** should be considered during preprocessing.
 
-Time and Amount are scaled using RobustScaler, with the scaler fit only on the training split and then applied to validation and test data.
+### Feature interpretation is intentionally limited
 
-The PCA-derived V1–V28 variables are left unchanged.
+The PCA-derived features provide useful predictive information, but their anonymized nature means they should not be given unsupported real-world interpretations.
 
-Modeling
+---
 
-The repository provides two class-aware baselines:
+## Modeling Strategy
 
-Model
+The next stage of the project is designed around the characteristics discovered during EDA.
 
-Imbalance handling
-
-Role
-
-Logistic Regression
-
-class_weight="balanced"
-
-Interpretable baseline
-
-Random Forest
-
-Balanced subsample weights
-
-Nonlinear ensemble baseline
-
-The implementation deliberately keeps validation and test sets in their natural imbalanced distribution.
-
-Model scores are not hard-coded into this README. Running the pipeline generates artifacts/metrics.json, ensuring displayed results can be traced to an actual experiment rather than copied or fabricated.
-
-Evaluation
-
-The evaluation module reports metrics designed for rare-event detection:
-
-AUPRC
-
-Area Under the Precision–Recall Curve is the primary ranking metric because it focuses directly on performance for the positive minority class.
-
-Recall
-
-Measures how many real fraud cases are successfully detected.
-
-Precision
-
-Measures how many transactions flagged as fraud are actually fraudulent.
-
-F1-score
-
-Balances precision and recall at a chosen decision threshold.
-
-ROC-AUC
-
-Reported as a secondary discrimination metric, but not used alone because ROC-AUC can look optimistic under extreme class imbalance.
-
-Threshold Tuning
-
-A default threshold of 0.5 is rarely the only sensible operating point for a fraud system.
-
-The pipeline:
-
-fits the classifier on training data;
-
-predicts probabilities on the validation set;
-
-selects a threshold using validation performance;
-
-evaluates that fixed threshold once on the untouched test set.
-
-This separates model discrimination from the business decision rule used to turn probabilities into alerts.
-
-Repository Structure
-
-credit-card-fraud-detection/
-├── README.md
-├── requirements.txt
-├── data/
-│   └── README.md
-├── figures/
-│   ├── class_imbalance.png
-│   ├── class_share.png
-│   ├── dataset_overview.png
-│   └── pipeline.png
-├── notebooks/
-│   ├── 01_eda.ipynb
-│   ├── 02_preprocessing.ipynb
-│   ├── 03_modeling.ipynb
-│   └── 04_evaluation.ipynb
-├── src/
-│   ├── data_loader.py
-│   ├── preprocessing.py
-│   ├── model.py
-│   ├── evaluation.py
-│   └── train.py
-├── tests/
-│   ├── test_data.py
-│   ├── test_preprocessing.py
-│   └── test_evaluation.py
-├── artifacts/
-└── models/
-
-The existing 01_eda.ipynb should be retained from the original repository; the package supplied here replaces the previously empty downstream notebooks with runnable workflow notebooks.
-
-Quick Start
-
-python -m venv .venv
-
-Activate the environment, then install dependencies:
-
-pip install -r requirements.txt
-
-Place creditcard.csv under data/, then run:
-
-python -m src.train --data data/creditcard.csv
-
-The training run writes test metrics to:
-
-artifacts/metrics.json
-
-and fitted estimators to:
-
-models/
-
-Run the tests with:
-
-pytest -q
-
-Design Principles
-
-Prevent leakage. Scaling and any future resampling must be learned from training data only.
-
-Evaluate the minority class directly. AUPRC and recall matter more than headline accuracy.
-
-Tune thresholds separately from training. The operating point is a business decision, not just a model default.
-
-Keep the test set untouched. Test performance should represent a final unbiased estimate.
-
-Prefer reproducible metrics over impressive-looking numbers. Results belong in the README only after a recorded run generates them.
-
-Next Improvements
-
-Add SMOTE and undersampling as training-only comparison arms.
-
-Add XGBoost or LightGBM with imbalance-aware weighting.
-
-Use StratifiedKFold for more stable model comparison.
-
-Add calibration analysis for predicted fraud probabilities.
-
-Compare threshold policies using explicit false-negative and false-positive costs.
-
-Generate PR curves and confusion-matrix figures automatically from metrics.json.
-
-Add GitHub Actions for unit tests.
-
-<div align="center">
-
-Credit Card Fraud Detection
-
-Rare-Event Classification · Imbalanced Learning · Threshold Optimization
-
-</div>
+```text
+Raw Transactions
+       │
+       ▼
+Data Quality Checks
+       │
+       ▼
+Train / Validation / Test Split
+       │
+       ▼
+Feature Preprocessing
+       │
+       ▼
+Imbalance-Aware Modeling
+       │
+       ▼
+Threshold Optimization
+       │
+       ▼
+Precision · Recall · F1 · AUPRC

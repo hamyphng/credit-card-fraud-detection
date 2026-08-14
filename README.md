@@ -13,8 +13,8 @@
 
 <p>
 A data-driven investigation of highly imbalanced credit-card transactions,
-focused on understanding fraudulent behavior and establishing a reliable
-foundation for fraud-detection modeling.
+from exploratory analysis and leakage-safe preprocessing to resampling strategies
+for fraud-detection modeling.
 </p>
 
 **Only 0.1727% of transactions are fraudulent — making class imbalance the central challenge.**
@@ -34,7 +34,9 @@ foundation for fraud-detection modeling.
 | **Fraud Cases** | 492 |
 | **Fraud Rate** | **0.1727%** |
 | **Missing Values** | 0 |
+| **Duplicate Rows** | 1,081 |
 | **Primary Challenge** | Extreme class imbalance |
+| **Current Stage** | **Preprocessing completed · Modeling next** |
 
 > **Headline finding:** fewer than **2 in every 1,000 transactions** are fraudulent. A naïve classifier could exceed 99.8% accuracy while detecting no fraud at all.
 
@@ -47,14 +49,15 @@ foundation for fraud-detection modeling.
   <a href="#exploratory-data-analysis">EDA</a> •
   <a href="#key-discovery">Key Discovery</a> •
   <a href="#feature-analysis">Features</a> •
+  <a href="#preprocessing">Preprocessing</a> •
+  <a href="#handling-class-imbalance">Imbalance Handling</a> •
   <a href="#modeling-strategy">Modeling</a> •
-  <a href="#evaluation-strategy">Evaluation</a> •
-  <a href="#key-findings">Findings</a>
+  <a href="#evaluation-strategy">Evaluation</a>
 </p>
 
 ---
 
-## Dataset
+# Dataset
 
 The dataset contains **284,807 credit-card transactions** described by **31 numerical variables**.
 
@@ -84,7 +87,7 @@ The dataset contains **284,807 credit-card transactions** described by **31 nume
 
 The dataset contains no missing values, reducing the need for imputation.
 
-However, **1,081 duplicated rows** were identified during exploratory analysis. These observations should be investigated or removed consistently before model development.
+However, **1,081 duplicated rows** were identified during exploratory analysis. These duplicates are removed before the train–validation–test split.
 
 All variables are numerical. The original meanings of `V1–V28` are unavailable because they have been transformed using PCA.
 
@@ -125,7 +128,7 @@ versus
 
 # 492 fraud cases
 
-### Only 0.1727% of the dataset
+### Only 0.1727% of the original dataset
 
 </div>
 
@@ -203,19 +206,19 @@ They can contain strong predictive signal despite lacking direct semantic interp
 </tr>
 </table>
 
-### Important Interpretation Constraint
+### Interpretation Constraint
 
 `V1–V28` should be interpreted **statistically rather than semantically**.
 
-For example, observing that `V14` differs strongly between fraudulent and legitimate transactions could make it useful for prediction, but it would not justify assigning a specific real-world meaning to `V14`.
+A PCA component may strongly distinguish fraudulent from legitimate transactions, but its anonymized nature does not justify assigning it a specific real-world meaning.
 
 ---
 
-# Modeling Strategy
+# Preprocessing
 
-## From exploration to fraud detection
+## Building a Leakage-Safe Dataset
 
-The planned modeling workflow is:
+The preprocessing pipeline is designed to prevent information from the validation or test sets from influencing model training.
 
 <div align="center">
 
@@ -223,7 +226,7 @@ The planned modeling workflow is:
 
 ↓
 
-**Data Quality & Deduplication**
+**Remove Duplicates**
 
 ↓
 
@@ -231,59 +234,221 @@ The planned modeling workflow is:
 
 ↓
 
-**Feature Preprocessing**
+**Fit RobustScaler on Training Data**
 
 ↓
 
-**Imbalance-Aware Classification**
+**Transform Validation & Test**
 
 ↓
 
-**Threshold Optimization**
-
-↓
-
-**Final Test Evaluation**
+**Resample Training Data Only**
 
 </div>
 
-### 01 — Prepare
+---
 
-Investigate duplicate observations and establish a consistent preprocessing policy.
+## 01 — Duplicate Removal
 
-### 02 — Split
+The **1,081 duplicated observations** identified during EDA are removed before splitting the dataset.
 
-Create stratified training, validation, and test sets so the rare fraud class remains represented across all partitions.
+After deduplication, the modeling dataset contains approximately:
 
-### 03 — Transform
+<div align="center">
 
-Scale `Time` and `Amount` using parameters learned from the training data only.
+### 283,726 unique transactions
 
-### 04 — Model
-
-Compare interpretable baseline models with nonlinear and imbalance-aware classifiers.
-
-### 05 — Tune
-
-Select the classification threshold using validation data instead of automatically relying on `0.5`.
-
-### 06 — Evaluate
-
-Evaluate the selected model once on the untouched test set.
+</div>
 
 ---
 
-## Candidate Models
+## 02 — Stratified Data Split
+
+The cleaned dataset is divided into:
+
+- **60% training**
+- **20% validation**
+- **20% test**
+
+Stratification preserves approximately the same fraud prevalence across all three sets.
+
+| Split | Normal | Fraud | Fraud Rate |
+|---|---:|---:|---:|
+| **Training** | 169,951 | 284 | **0.1668%** |
+| **Validation** | 56,651 | 94 | **0.1657%** |
+| **Test** | 56,651 | 95 | **0.1674%** |
+
+The validation and test sets remain in their **natural imbalanced distribution**.
+
+This is essential because model performance should be measured under conditions that resemble the original data rather than an artificially balanced evaluation set.
+
+---
+
+## 03 — Feature Scaling
+
+Only:
+
+- `Time`
+- `Amount`
+
+are explicitly scaled.
+
+The pipeline uses **RobustScaler**, which is less sensitive to extreme values than standard mean–variance scaling.
+
+Most importantly:
+
+> **The scaler is fitted only on the training set.**
+
+The learned transformation is then applied to validation and test data.
+
+This prevents information leakage from the holdout sets into preprocessing.
+
+`V1–V28` are left unchanged because they are already PCA-transformed variables.
+
+---
+
+# Handling Class Imbalance
+
+The training data still contains only:
+
+<div align="center">
+
+### 284 fraud cases vs. 169,951 legitimate transactions
+
+</div>
+
+Rather than committing to a single balancing technique, the project prepares **three alternative training distributions** for controlled comparison.
+
+---
+
+## Strategy 1 — Original Distribution
+
+The first training set preserves the natural class distribution.
+
+| Class | Samples |
+|---|---:|
+| Normal | **169,951** |
+| Fraud | **284** |
+| Fraud Rate | **0.1668%** |
+
+This dataset provides the reference condition for models trained without synthetic or majority-class resampling.
+
+Class weighting can later be applied at the model level.
+
+---
+
+## Strategy 2 — SMOTE
+
+**Synthetic Minority Over-sampling Technique (SMOTE)** increases minority-class representation by generating synthetic fraud observations between neighboring minority samples.
+
+SMOTE is applied **only to the training set**.
+
+### Before SMOTE
+
+| Class | Samples |
+|---|---:|
+| Normal | 169,951 |
+| Fraud | 284 |
+
+### After SMOTE
+
+| Class | Samples |
+|---|---:|
+| Normal | **169,951** |
+| Fraud | **16,995** |
+| Total | **186,946** |
+
+The configuration uses:
+
+**Fraud / Normal = 0.10**
+
+which produces a fraud share of approximately:
+
+<div align="center">
+
+# 9.09%
+
+### in the SMOTE training set
+
+</div>
+
+The goal is not to force an artificial 50:50 distribution.
+
+Instead, minority representation is increased substantially while the majority class remains dominant.
+
+---
+
+## Strategy 3 — Random Undersampling
+
+Random undersampling takes the opposite approach.
+
+Instead of generating additional fraud observations, it reduces the number of legitimate training samples.
+
+### After Undersampling
+
+| Class | Samples |
+|---|---:|
+| Normal | **2,840** |
+| Fraud | **284** |
+| Total | **3,124** |
+| Fraud Rate | **9.09%** |
+
+This dramatically reduces majority-class dominance and computational cost.
+
+However, it also discards a large amount of legitimate transaction information.
+
+That trade-off will be evaluated empirically rather than assumed to be beneficial.
+
+---
+
+# Experimental Design
+
+## Three views of the same fraud problem
+
+| Training Strategy | Normal | Fraud | Main Trade-off |
+|---|---:|---:|---|
+| **Original** | 169,951 | 284 | Preserves all real observations |
+| **SMOTE** | 169,951 | 16,995 | Adds synthetic minority information |
+| **Undersampling** | 2,840 | 284 | Removes majority information |
+
+All three strategies will be evaluated against the **same untouched validation and test sets**.
+
+This isolates the effect of the imbalance-handling strategy from changes in the evaluation distribution.
+
+---
+
+# Modeling Strategy
+
+## From preprocessing to fraud detection
+
+The next stage compares models across the alternative training distributions.
+
+### Baseline
+
+Train on the original class distribution to establish reference performance.
+
+### Class-Weighted Learning
+
+Train on the original observations while increasing the model's penalty for minority-class errors.
+
+### SMOTE-Based Learning
+
+Train on the synthetic minority-enhanced dataset.
+
+### Undersampling-Based Learning
+
+Train on the reduced majority-class dataset.
+
+Potential classifiers include:
 
 | Model | Role |
 |---|---|
-| **Logistic Regression** | Interpretable baseline |
+| **Logistic Regression** | Interpretable linear baseline |
 | **Random Forest** | Nonlinear ensemble baseline |
 | **Gradient Boosting** | Capture complex feature interactions |
-| **Class-Weighted Models** | Increase attention to rare fraud cases |
-| **Resampling Strategies** | Improve minority-class learning during training |
+| **Class-Weighted Models** | Handle imbalance without modifying the dataset |
 
-> Final model scores are intentionally not reported yet because the current repository contains completed exploratory analysis but does not yet contain a verified end-to-end modeling experiment.
+> Final model scores are intentionally not reported yet because model training and final evaluation have not been completed.
 
 ---
 
@@ -301,7 +466,9 @@ The objective is to detect as much fraud as possible while maintaining a managea
 | **Recall** | How much actual fraud does the model detect? |
 | **Precision** | How many fraud alerts are truly fraudulent? |
 | **F1-score** | How well are precision and recall balanced? |
-| **ROC-AUC** | How well does the model separate the two classes? |
+| **ROC-AUC** | How well does the model rank the two classes? |
+
+For this dataset, **AUPRC and the precision–recall trade-off** are particularly important because the positive class is extremely rare.
 
 ---
 
@@ -334,11 +501,57 @@ Potential consequences include investigation costs and unnecessary customer disr
 </tr>
 </table>
 
-The optimal classification threshold therefore depends on the relative cost of these two errors.
+A practical fraud-detection system therefore requires more than a good ranking model.
+
+It also requires an appropriate **decision threshold**.
 
 ---
 
-# Key Findings
+# Threshold Optimization
+
+The default classification threshold:
+
+```text
+0.50
+```
+
+is not automatically optimal for fraud detection.
+
+The planned evaluation workflow is:
+
+<div align="center">
+
+**Train Model**
+
+↓
+
+**Predict Validation Probabilities**
+
+↓
+
+**Analyze Precision–Recall Trade-off**
+
+↓
+
+**Select Operating Threshold**
+
+↓
+
+**Lock Threshold**
+
+↓
+
+**Evaluate Once on Test Set**
+
+</div>
+
+Threshold selection is performed using **validation data only**.
+
+The test set remains untouched until the final evaluation.
+
+---
+
+# Key Findings So Far
 
 <table>
 <tr>
@@ -346,16 +559,16 @@ The optimal classification threshold therefore depends on the relative cost of t
 
 ### Extreme class imbalance
 
-Only **0.1727%** of transactions are fraudulent.
+Only **0.1727%** of the original transactions are fraudulent.
 
-The minority class is approximately **1 in every 578 transactions**.
+This is the defining characteristic of the problem.
 
 </td>
 <td width="50%" valign="top">
 
 ### Accuracy is deceptive
 
-A model could exceed **99.8% accuracy** while detecting absolutely no fraud.
+A classifier could exceed **99.8% accuracy** while detecting no fraud.
 
 </td>
 </tr>
@@ -363,16 +576,35 @@ A model could exceed **99.8% accuracy** while detecting absolutely no fraud.
 <tr>
 <td width="50%" valign="top">
 
-### Data quality is strong
+### Leakage-safe preprocessing matters
 
-The dataset contains **no missing values**, although **1,081 duplicate rows** require attention.
+Duplicates are removed before splitting, and scaling parameters are learned from training data only.
 
 </td>
 <td width="50%" valign="top">
 
-### Evaluation design matters
+### Evaluation remains realistic
 
-AUPRC, recall, precision, and F1-score provide substantially more meaningful information than accuracy alone.
+SMOTE and undersampling are restricted to the training set.
+
+Validation and test distributions remain untouched.
+
+</td>
+</tr>
+
+<tr>
+<td width="50%" valign="top">
+
+### SMOTE preserves majority information
+
+All **169,951 legitimate training samples** remain available while synthetic fraud observations increase minority representation.
+
+</td>
+<td width="50%" valign="top">
+
+### Undersampling is aggressive
+
+Only **2,840 legitimate samples** remain, making training much smaller but potentially discarding useful information.
 
 </td>
 </tr>
@@ -382,19 +614,19 @@ AUPRC, recall, precision, and F1-score provide substantially more meaningful inf
 
 # Interpretation
 
-The exploratory analysis shows that credit-card fraud detection should be treated as a **rare-event classification problem**, not a conventional balanced machine-learning task.
+The project has now moved beyond exploratory analysis into a controlled **imbalanced-learning experiment**.
 
-The extreme class imbalance means that overall correctness provides little information about whether a model can identify fraudulent activity.
+The preprocessing stage establishes two principles that are especially important for fraud detection:
 
-A reliable modeling pipeline should therefore:
+**First, evaluation data should remain realistic.**
 
-- preserve realistic class distributions during evaluation;
-- prevent preprocessing leakage;
-- evaluate minority-class performance directly;
-- separate probability estimation from threshold selection;
-- analyze both false negatives and false positives.
+Artificially balancing validation or test data would produce metrics that do not represent the original transaction environment.
 
-The anonymized PCA features may provide substantial predictive value, but predictive usefulness should not be confused with direct business interpretation.
+**Second, imbalance handling is an experimental choice rather than an automatic preprocessing step.**
+
+SMOTE, undersampling, and class weighting solve different problems and introduce different trade-offs.
+
+The next modeling stage will therefore compare these strategies under the **same validation and test conditions** rather than assuming that balancing the dataset necessarily improves fraud detection.
 
 ---
 
@@ -402,26 +634,42 @@ The anonymized PCA features may provide substantial predictive value, but predic
 
 - `V1–V28` are anonymized, limiting direct feature interpretation.
 - The dataset represents historical transactions and may not capture future fraud patterns.
-- Extreme class imbalance makes performance sensitive to metric selection.
-- Duplicate observations require a consistent preprocessing decision.
-- The current project version does not yet contain a verified final classifier.
-- Real-world deployment would additionally require monitoring for concept drift.
-- Business costs associated with false negatives and false positives are unavailable.
+- SMOTE generates synthetic observations rather than real fraudulent transactions.
+- Random undersampling discards a substantial amount of legitimate transaction information.
+- Extreme class imbalance makes performance highly sensitive to metric and threshold selection.
+- The project does not yet contain verified final model results.
+- Real-world deployment would additionally require monetary cost modeling, latency constraints, alert capacity, and concept-drift monitoring.
+
+---
+
+## Current Progress
+
+| Stage | Status |
+|---|---|
+| Exploratory Data Analysis | **Completed** |
+| Data Quality Analysis | **Completed** |
+| Duplicate Removal | **Completed** |
+| Stratified Data Splitting | **Completed** |
+| Robust Feature Scaling | **Completed** |
+| SMOTE | **Completed** |
+| Random Undersampling | **Completed** |
+| Model Training | **Next** |
+| Model Comparison | Planned |
+| Threshold Optimization | Planned |
+| Final Test Evaluation | Planned |
 
 ---
 
 ## Next Steps
 
-The next stage of the project will focus on turning the exploratory analysis into a reproducible fraud-detection experiment:
-
-**01.** Establish the duplicate-handling policy  
-**02.** Create leakage-safe stratified data splits  
-**03.** Build interpretable baseline classifiers  
-**04.** Compare imbalance-handling strategies  
-**05.** Evaluate using AUPRC, precision, recall, and F1-score  
-**06.** Optimize the decision threshold  
-**07.** Analyze false positives and false negatives  
-**08.** Report final performance on an untouched test set
+**01.** Train baseline models on the original distribution  
+**02.** Compare class-weighted, SMOTE, and undersampled strategies  
+**03.** Evaluate validation AUPRC, precision, recall, and F1-score  
+**04.** Compare Precision–Recall curves across models  
+**05.** Optimize the decision threshold using validation data  
+**06.** Analyze false positives and false negatives  
+**07.** Select the final model and imbalance strategy  
+**08.** Report performance once on the untouched test set
 
 ---
 
@@ -440,4 +688,28 @@ credit-card-fraud-detection/
 │   ├── 03_modeling.ipynb
 │   └── 04_evaluation.ipynb
 ├── src/
+│   ├── data_loader.py
+│   └── preprocessing.py
 └── tests/
+```
+
+### Notebook Progress
+
+| Notebook | Status |
+|---|---|
+| `01_eda.ipynb` | **Completed** |
+| `02_preprocessing.ipynb` | **Completed** |
+| `03_modeling.ipynb` | Next |
+| `04_evaluation.ipynb` | Planned |
+
+</details>
+
+---
+
+<div align="center">
+
+### Credit Card Fraud Detection
+
+**Exploratory Analysis • Imbalanced Learning • Fraud Analytics**
+
+</div>

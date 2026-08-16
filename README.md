@@ -12,12 +12,20 @@
 </p>
 
 <p>
-A leakage-aware machine-learning study of extreme credit-card fraud imbalance,
-from exploratory analysis and resampling experiments to cross-validated model
-selection and threshold-optimized final evaluation.
+  <a href="https://github.com/hamyphng/credit-card-fraud-detection/actions/workflows/tests.yml">
+    <img src="https://github.com/hamyphng/credit-card-fraud-detection/actions/workflows/tests.yml/badge.svg" alt="Tests"/>
+  </a>
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" alt="Python 3.11"/>
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"/>
 </p>
 
-**XGBoost achieved 0.8253 holdout AUPRC and 98.55% precision, with only one false positive.**
+<p>
+A reproducible machine-learning study of extreme credit-card fraud imbalance,
+covering leakage-safe preprocessing, imbalance-aware learning, cross-validated
+model selection, validation-based threshold optimization, and final holdout evaluation.
+</p>
+
+**XGBoost achieved 0.8253 holdout AUPRC and 98.55% precision, with only one false positive on the untouched test set.**
 
 </div>
 

@@ -5,7 +5,7 @@ seaborn
 scikit-learn
 ipykernel
 pytest
-imbalance-learn
+imbalanced-learn
 joblib
 xgboost
 lightgbm

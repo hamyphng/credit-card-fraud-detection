@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from src.preprocessing import SCALE_COLUMNS, split_and_scale_data
+from src.preprocessing import SCALE_COLUMNS, split_and_scale_data, split_data
 
 
 def make_transactions() -> pd.DataFrame:
@@ -35,3 +35,11 @@ def test_scaler_is_fit_on_train_only():
     original_train_values = df.loc[X_train.index, SCALE_COLUMNS]
 
     assert np.allclose(scaler.center_, original_train_values.median().to_numpy())
+
+
+def test_split_data_keeps_raw_time_and_amount_values():
+    df = make_transactions()
+    X_train, _, _, _, _, _ = split_data(df)
+
+    assert X_train["Time"].max() > 1
+    assert X_train["Amount"].max() > 1

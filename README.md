@@ -7,7 +7,7 @@
 <p>
   <img src="https://img.shields.io/badge/Transactions-284%2C807-2ea44f?style=for-the-badge" alt="Transactions"/>
   <img src="https://img.shields.io/badge/Models-6-0969da?style=for-the-badge" alt="Models"/>
-  <img src="https://img.shields.io/badge/Test%20AUPRC-0.8214-6f42c1?style=for-the-badge" alt="Test AUPRC"/>
+  <img src="https://img.shields.io/badge/Test%20AUPRC-0.8253-6f42c1?style=for-the-badge" alt="Test AUPRC"/>
   <img src="https://img.shields.io/badge/Test%20Precision-98.55%25-orange?style=for-the-badge" alt="Test Precision"/>
 </p>
 
@@ -17,7 +17,7 @@ from exploratory analysis and resampling experiments to cross-validated model
 selection and threshold-optimized final evaluation.
 </p>
 
-**XGBoost achieved 0.8214 test AUPRC and 98.55% precision, with only one false positive on the untouched test set.**
+**XGBoost achieved 0.8253 holdout AUPRC and 98.55% precision, with only one false positive.**
 
 </div>
 
@@ -35,8 +35,8 @@ selection and threshold-optimized final evaluation.
 | **Models Compared** | 6 |
 | **Selection Metric** | 5-fold CV AUPRC |
 | **Selected Model** | XGBoost |
-| **Final Threshold** | 0.9188 |
-| **Test AUPRC** | **0.8214** |
+| **Final Threshold** | 0.9598 |
+| **Test AUPRC** | **0.8253** |
 | **Test Precision** | **98.55%** |
 | **Test Recall** | **71.58%** |
 
@@ -168,9 +168,9 @@ Six candidate strategies are compared under the same **5-fold Stratified Cross-V
 
 | Model | Recall | Precision | F1 | AUPRC |
 |---|---:|---:|---:|---:|
-| **XGBoost** | 0.8201 | 0.9023 | **0.8587** | **0.8414** |
-| LightGBM | 0.8130 | 0.9051 | 0.8558 | 0.8315 |
-| Class-Weighted Random Forest | 0.7145 | **0.9441** | 0.8130 | 0.8266 |
+| **XGBoost** | 0.8164 | 0.8943 | 0.8527 | **0.8455** |
+| LightGBM | 0.8060 | **0.9150** | **0.8566** | 0.8273 |
+| Class-Weighted Random Forest | 0.7039 | 0.9387 | 0.8036 | 0.8271 |
 | Class-Weighted Logistic | **0.9044** | 0.0534 | 0.1007 | 0.7386 |
 | SMOTE + Logistic | 0.8551 | 0.3761 | 0.5215 | 0.7355 |
 | Undersampling + Logistic | 0.8622 | 0.2859 | 0.4284 | 0.7004 |
@@ -197,11 +197,11 @@ The XGBoost threshold was selected **using validation data only** by maximizing 
 
 | Validation Setting | Precision | Recall | F1 |
 |---|---:|---:|---:|
-| Threshold 0.50 | 0.9080 | **0.8404** | 0.8729 |
-| **Threshold 0.9188** | **0.9512** | 0.8298 | **0.8864** |
+| Threshold 0.50 | 0.9000 | **0.8617** | 0.8804 |
+| **Threshold 0.9598** | **0.9750** | 0.8298 | **0.8966** |
 
 <p align="center">
-  <img src="figures/threshold_tradeoff.png" width="68%" alt="Threshold trade-off"/>
+  <img src="figures/threshold_analysis.png" width="68%" alt="Threshold trade-off"/>
 </p>
 
 The tuned threshold sacrifices a small amount of recall in exchange for higher precision and a better F1-score.
@@ -216,11 +216,11 @@ After this threshold was selected, it was **locked before the test set was evalu
 
 | Metric | Result |
 |---|---:|
-| Decision Threshold | **0.9188** |
+| Decision Threshold | **0.9598** |
 | Precision | **98.55%** |
 | Recall | **71.58%** |
 | F1-score | **82.93%** |
-| AUPRC | **82.14%** |
+| AUPRC | **82.53%** |
 | True Positives | **68** |
 | False Positives | **1** |
 | False Negatives | **27** |
@@ -300,7 +300,7 @@ Headline accuracy is therefore not informative.
 
 ### XGBoost provided the best overall CV result
 
-It achieved the highest **AUPRC (0.8414)** and **F1 (0.8587)** across six candidate strategies.
+It achieved the highest **AUPRC (0.8455)** across six candidate strategies.
 
 </td>
 
@@ -320,7 +320,7 @@ SMOTE and undersampling increased minority representation, but both Logistic bas
 
 ### Threshold selection matters
 
-Changing the validation threshold from **0.50 to 0.9188** improved F1 from **0.8729 to 0.8864**.
+Changing the validation threshold from **0.50 to 0.9598** improved F1 from **0.8804 to 0.8966**.
 
 </td>
 
@@ -416,13 +416,13 @@ credit-card-fraud-detection/
 │
 ├── figures/
 │   ├── model_comparison.png
-│   ├── threshold_tradeoff.png
+│   ├── threshold_analysis.png
 │   ├── final_test_performance.png
 │   └── confusion_matrix.png
 │
 └── results/
     ├── model_comparison.csv
-    ├── threshold_summary.csv
+    ├── threshold_analysis.csv
     └── final_test_metrics.json
 ```
 
@@ -452,6 +452,13 @@ Run the notebooks in order:
 02_preprocessing.ipynb
 03_modeling.ipynb
 04_evaluation.ipynb
+```
+
+Or reproduce the published model-comparison, threshold, and holdout result without Jupyter:
+
+```bash
+python scripts/run_experiment.py
+python scripts/generate_report_assets.py
 ```
 
 Run the unit tests:

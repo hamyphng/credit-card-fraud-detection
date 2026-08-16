@@ -181,7 +181,7 @@ Six candidate strategies are compared under the same **5-fold Stratified Cross-V
 
 ## Why XGBoost?
 
-XGBoost produced the **highest CV AUPRC and F1-score**, while maintaining a strong balance between precision and recall.
+XGBoost produced the **highest CV AUPRC**, the primary selection metric, while maintaining a strong balance between precision and recall. LightGBM achieved a marginally higher F1-score, so the two models remain close alternatives under a different operating objective.
 
 The comparison also shows why recall alone is insufficient.
 

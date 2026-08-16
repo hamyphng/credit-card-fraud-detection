@@ -448,7 +448,20 @@ Potential classifiers include:
 | **Gradient Boosting** | Capture complex feature interactions |
 | **Class-Weighted Models** | Handle imbalance without modifying the dataset |
 
-> Final model scores are intentionally not reported yet because model training and final evaluation have not been completed.
+## Final Model Result
+
+The selected model is an XGBoost classifier. The threshold was selected on validation data by maximizing F1-score, then evaluated once on the untouched test set.
+
+| Metric | Test result |
+|---|---:|
+| Decision threshold | 0.919 |
+| Precision | 98.55% |
+| Recall | 71.58% |
+| F1-score | 82.93% |
+| AUPRC | 82.14% |
+| True positives | 68 |
+| False positives | 1 |
+| False negatives | 27 |
 
 ---
 
